@@ -3,6 +3,7 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
+    restart: always
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: password123
@@ -14,13 +15,15 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: always
     ports:
       - "6379:6379"
 
   app:
     build: .
+    restart: always
     ports:
-      - "80:3000"
+      - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://root:password123@postgres:5432/uptime_db?schema=public
       - REDIS_HOST=redis
