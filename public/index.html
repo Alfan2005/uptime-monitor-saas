@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cloud Uptime Monitor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-6 md:p-12">
+  <div class="max-w-5xl mx-auto space-y-8">
+    
+    <!-- Header -->
+    <header class="flex justify-between items-center border-b border-slate-800 pb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+          <span class="inline-block w-3 h-3 bg-emerald-500 rounded-full animate-ping"></span>
+          Cloud Monitor Engine
+        </h1>
+        <p class="text-sm text-slate-400 mt-1">Sistem Pemantauan Status Server & API Real-Time</p>
+      </div>
+      <button onclick="fetchMonitors()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg border border-slate-700 transition">
+        🔄 Refresh Data
+      </button>
+    </header>
+
+    <!-- Form Tambah URL -->
+    <section class="bg-slate-800/50 border border-slate-700/60 p-6 rounded-2xl shadow-xl">
+      <h2 class="text-lg font-semibold text-white mb-4">Tambah URL Baru</h2>
+      <form id="monitorForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <input type="text" id="name" placeholder="Nama Website (mis: Google)" required class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500" />
+        <input type="url" id="url" placeholder="https://example.com" required class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500" />
+        <input type="number" id="interval" placeholder="Interval (Menit)" value="1" min="1" required class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500" />
+        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition shadow-lg shadow-emerald-600/20">
+          + Tambah Monitor
+        </button>
+      </form>
+    </section>
+
+    <!-- Daftar Monitor -->
+    <section class="space-y-4">
+      <h2 class="text-lg font-semibold text-white">Status Layanan Pemantauan</h2>
+      <div id="monitorList" class="grid grid-cols-1 gap-4">
+        <div class="text-center py-8 text-slate-500">Memuat data monitor...</div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    const API_URL = '/api/monitors';
+
+    async function fetchMonitors() {
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        const container = document.getElementById('monitorList');
+
+        if (data.length === 0) {
+          container.innerHTML = `<div class="text-center py-8 text-slate-500 bg-slate-800/30 rounded-2xl border border-slate-800">Belum ada URL yang dipantau. Tambahkan di atas.</div>`;
+          return;
+        }
+
+        container.innerHTML = data.map(item => {
+          const isUp = item.status === 'UP';
+          const lastLog = item.logs && item.logs.length > 0 ? item.logs[0] : null;
+          
+          return `
+            <div class="bg-slate-800/80 border border-slate-700/80 p-5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <div class="flex items-center gap-3">
+                  <span class="font-bold text-white">${item.name}</span>
+                  <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold ${isUp ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
+                    ${isUp ? '● ONLINE' : '✖ DOWN'}
+                  </span>
+                </div>
+                <a href="${item.url}" target="_blank" class="text-xs text-slate-400 hover:underline mt-1 inline-block">${item.url}</a>
+              </div>
+              <div class="flex items-center gap-6 text-xs text-slate-400">
+                <div>
+                  <span class="block text-slate-500">Interval</span>
+                  <span class="font-semibold text-slate-300">${item.interval} Mins</span>
+                </div>
+                <div>
+                  <span class="block text-slate-500">Response Time</span>
+                  <span class="font-semibold text-slate-300">${lastLog ? lastLog.responseTime + ' ms' : '-'}</span>
+                </div>
+                <div>
+                  <span class="block text-slate-500">Status Code</span>
+                  <span class="font-semibold text-slate-300">${lastLog ? lastLog.statusCode : '-'}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Gagal mengambil data:', err);
+      }
+    }
+
+    document.getElementById('monitorForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const url = document.getElementById('url').value;
+      const interval = document.getElementById('interval').value;
+
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, url, interval })
+      });
+
+      document.getElementById('monitorForm').reset();
+      fetchMonitors();
+    });
+
+    // Load data awal & auto-refresh setiap 10 detik
+    fetchMonitors();
+    setInterval(fetchMonitors, 10000);
+  </script>
+</body>
+</html>
