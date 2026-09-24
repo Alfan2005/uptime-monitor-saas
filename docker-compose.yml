@@ -17,5 +17,18 @@ services:
     ports:
       - "6379:6379"
 
+  app:
+    build: .
+    ports:
+      - "80:3000"
+    environment:
+      - DATABASE_URL=postgresql://root:password123@postgres:5432/uptime_db?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PORT=3000
+    depends_on:
+      - postgres
+      - redis
+
 volumes:
   pgdata:
